@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>REBORN AI MUSIC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#0a0608;--deep:#100a12;--surface:#170f1a;
+  --ember:#e05c1a;--ember2:#f07d3a;--gold:#c9932a;
+  --ash:#d4c8be;--fog:#7a6e78;
+}
+html{background:var(--ink);color:var(--ash);font-family:'DM Mono',monospace;font-size:14px;overflow-x:hidden}
+body{min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:999;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");opacity:.35;mix-blend-mode:overlay;}
+#ambientBg{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 80% 60% at 30% 40%,#2a0e18 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 75% 70%,#0d0818 0%,transparent 60%),var(--ink);transition:background 2s ease;}
+.shell{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* LOADING */
+#loadScreen{position:fixed;inset:0;z-index:1000;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;transition:opacity .6s ease;}
+#loadScreen.gone{opacity:0;pointer-events:none}
+.load-logo{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.2em;color:var(--ember)}
+.load-logo em{color:var(--ash);font-style:normal}
+.load-bar-wrap{width:200px;height:2px;background:rgba(201,147,42,.15);border-radius:2px}
+.load-bar{height:100%;background:var(--ember);border-radius:2px;width:0%;transition:width .4s}
+.load-txt{font-size:.6rem;letter-spacing:.25em;color:var(--fog);text-transform:uppercase}
+
+/* FILE PICKER OVERLAY */
+#pickerOverlay{position:fixed;inset:0;z-index:2000;background:rgba(10,6,8,.97);display:none;flex-direction:column;align-items:center;justify-content:center;gap:1.8rem;}
+#pickerOverlay.show{display:flex}
+.picker-logo{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:.22em;color:var(--ember)}
+.picker-logo em{color:var(--ash);font-style:normal}
+.picker-desc{font-size:.72rem;letter-spacing:.12em;color:var(--fog);text-align:center;max-width:340px;line-height:1.8}
+.picker-btn{cursor:pointer;padding:.75rem 2rem;background:linear-gradient(135deg,var(--ember),#b03a0a);color:#fff;font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;border-radius:2px;box-shadow:0 0 24px rgba(224,92,26,.4);border:none;font-family:'DM Mono',monospace;transition:transform .15s,box-shadow .15s;}
+.picker-btn:hover{transform:scale(1.04);box-shadow:0 0 32px rgba(224,92,26,.6)}
+.picker-hint{font-size:.58rem;color:rgba(122,110,120,.5);letter-spacing:.1em}
+.picker-saved{font-size:.62rem;color:var(--gold);letter-spacing:.1em;cursor:pointer;border-bottom:1px solid rgba(201,147,42,.3);padding-bottom:.1rem}
+
+/* HEADER */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:1.4rem 2.4rem;border-bottom:1px solid rgba(201,147,42,.12);}
+.hdr-logo{font-family:'Bebas Neue',sans-serif;font-size:1.45rem;letter-spacing:.18em;color:var(--ember);text-shadow:0 0 30px rgba(224,92,26,.5)}
+.hdr-logo em{color:var(--ash);font-style:normal}
+.hdr-album{font-size:.62rem;letter-spacing:.28em;color:var(--fog);text-transform:uppercase}
+.hdr-right{display:flex;align-items:center;gap:1rem}
+.hdr-count{font-size:.62rem;color:var(--fog);letter-spacing:.1em}
+.hdr-reload{font-size:.58rem;color:rgba(122,110,120,.5);cursor:pointer;letter-spacing:.1em;padding:.25rem .5rem;border:1px solid rgba(122,110,120,.2);border-radius:1px;transition:all .2s;}
+.hdr-reload:hover{color:var(--ember);border-color:var(--ember)}
+
+/* MAIN */
+.main{flex:1;display:grid;grid-template-columns:1fr 520px;overflow:hidden;min-height:calc(100vh - 56px - 80px)}
+
+/* STAGE */
+.stage{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;overflow:hidden;gap:2rem}
+.stage-glow{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 55% 55% at 50% 48%,rgba(224,92,26,.07) 0%,transparent 70%)}
+
+/* ART SLEEVE */
+.art-sleeve{position:relative;width:280px;height:280px;flex-shrink:0;box-shadow:-8px 8px 0 rgba(0,0,0,.6),-12px 12px 30px rgba(0,0,0,.8),0 0 60px rgba(224,92,26,.12);border-radius:2px;overflow:hidden;}
+.art-sleeve-spine{position:absolute;left:0;top:0;bottom:0;width:8px;background:linear-gradient(180deg,#1a0a0a,#0d0508,#1a0a0a);z-index:2}
+.art-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 1s ease;opacity:0}
+.art-img.loaded{opacity:1}
+.art-shimmer{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.8rem;background:var(--surface)}
+.art-shimmer-ring{width:48px;height:48px;border-radius:50%;border:1.5px solid var(--ember);border-top-color:transparent;animation:spin-ring .9s linear infinite}
+@keyframes spin-ring{to{transform:rotate(360deg)}}
+.art-shimmer p{font-size:.58rem;letter-spacing:.25em;color:var(--gold);text-transform:uppercase}
+.art-ai-tag{position:absolute;bottom:6px;right:6px;z-index:3;background:rgba(10,6,8,.75);border:1px solid rgba(201,147,42,.35);font-size:.55rem;letter-spacing:.18em;color:var(--gold);padding:.2rem .45rem;border-radius:1px;backdrop-filter:blur(4px)}
+
+/* VINYL */
+.vinyl-wrap{position:relative;width:260px;height:260px;flex-shrink:0}
+.vinyl-disc{width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 50% 50%, #1c1020 0%, #1c1020 20%, transparent 20.5%),repeating-radial-gradient(circle at 50% 50%,transparent 0,transparent 2.4px,rgba(201,147,42,.06) 2.4px,rgba(201,147,42,.06) 3px,transparent 3px,transparent 5.5px,rgba(255,255,255,.018) 5.5px,rgba(255,255,255,.018) 6px),conic-gradient(from 0deg,#111 0deg,#1a1a1a 5deg,#0d0d0d 10deg,#161616 15deg,#111 20deg,#1a1a1a 25deg,#0d0d0d 30deg,#161616 35deg,#111 40deg,#1a1a1a 45deg,#0d0d0d 50deg,#161616 55deg,#111 60deg,#1a1a1a 65deg,#0d0d0d 70deg,#161616 75deg,#111 80deg,#1a1a1a 85deg,#0d0d0d 90deg,#161616 95deg,#111 100deg,#1a1a1a 105deg,#0d0d0d 110deg,#161616 115deg,#111 120deg,#1a1a1a 125deg,#0d0d0d 130deg,#161616 135deg,#111 140deg,#1a1a1a 145deg,#0d0d0d 150deg,#161616 155deg,#111 160deg,#1a1a1a 165deg,#0d0d0d 170deg,#161616 175deg,#111 180deg,#1a1a1a 185deg,#0d0d0d 190deg,#161616 195deg,#111 200deg,#1a1a1a 205deg,#0d0d0d 210deg,#161616 215deg,#111 220deg,#1a1a1a 225deg,#0d0d0d 230deg,#161616 235deg,#111 240deg,#1a1a1a 245deg,#0d0d0d 250deg,#161616 255deg,#111 260deg,#1a1a1a 265deg,#0d0d0d 270deg,#161616 275deg,#111 280deg,#1a1a1a 285deg,#0d0d0d 290deg,#161616 295deg,#111 300deg,#1a1a1a 305deg,#0d0d0d 310deg,#161616 315deg,#111 320deg,#1a1a1a 325deg,#0d0d0d 330deg,#161616 335deg,#111 340deg,#1a1a1a 345deg,#0d0d0d 350deg,#161616 355deg);box-shadow:0 0 0 1px rgba(255,255,255,.04),0 8px 40px rgba(0,0,0,.9),0 0 50px rgba(224,92,26,.1),inset 0 0 80px rgba(0,0,0,.6);animation:vinyl-spin 3.2s linear infinite;animation-play-state:paused;will-change:transform;}
+.vinyl-disc.playing{animation-play-state:running}
+@keyframes vinyl-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.vinyl-disc::after{content:'';position:absolute;inset:0;border-radius:50%;pointer-events:none;background:conic-gradient(from 130deg,transparent 0deg,rgba(255,255,255,.07) 30deg,transparent 60deg,rgba(255,255,255,.03) 90deg,transparent 180deg)}
+.vinyl-label-el{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;border-radius:50%;z-index:4;background:radial-gradient(circle,#2d1635 0%,#1e0f28 50%,#160a1e 100%);border:1px solid rgba(201,147,42,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,.9);gap:1px}
+.vl-brand{font-family:'Bebas Neue',sans-serif;font-size:.52rem;letter-spacing:.2em;color:var(--gold);line-height:1}
+.vl-num{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:300;color:var(--ash);line-height:1}
+.vinyl-spindle{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:7px;height:7px;border-radius:50%;z-index:5;background:radial-gradient(circle,#f0c060,#c09020);box-shadow:0 0 6px rgba(201,147,42,.8)}
+.tonearm-wrap{position:absolute;top:-8px;right:-24px;width:80px;height:150px;transform-origin:14px 14px;transform:rotate(-28deg);transition:transform 1s cubic-bezier(.4,0,.2,1);z-index:10}
+.tonearm-wrap.playing{transform:rotate(-6deg)}
+.tonearm-pivot{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,#3a2838,#221528);border:1.5px solid rgba(201,147,42,.5);position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center}
+.tonearm-pivot::after{content:'';width:8px;height:8px;border-radius:50%;background:radial-gradient(circle,#d4a030,#a07020)}
+.tonearm-arm{position:absolute;top:13px;left:13px;width:3px;height:130px;background:linear-gradient(180deg,#a09090,#706060,#504848);border-radius:2px;transform-origin:top;transform:rotate(-8deg);box-shadow:1px 0 4px rgba(0,0,0,.5)}
+.tonearm-head{position:absolute;bottom:-10px;left:-5px;width:12px;height:16px;background:linear-gradient(135deg,#2a2038,#18101e);border:1px solid rgba(201,147,42,.3);border-radius:2px}
+.tonearm-needle{position:absolute;bottom:-20px;left:4px;width:1.5px;height:12px;background:linear-gradient(180deg,#c0a030,#ffffff);border-radius:1px}
+
+/* INFO PANEL */
+.info{border-left:1px solid rgba(201,147,42,.1);display:flex;flex-direction:column;overflow:hidden;background:var(--deep)}
+.track-hdr{padding:2rem 2rem 1.2rem;border-bottom:1px solid rgba(201,147,42,.08)}
+.track-eyebrow{font-size:.58rem;letter-spacing:.35em;color:var(--ember);text-transform:uppercase;margin-bottom:.55rem;display:flex;align-items:center;gap:.5rem}
+.track-eyebrow::before{content:'';width:20px;height:1px;background:var(--ember);opacity:.6}
+.track-name{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:300;line-height:1.15;color:var(--ash);margin-bottom:.3rem}
+.track-sub{font-size:.6rem;letter-spacing:.2em;color:var(--fog);text-transform:uppercase}
+.lyrics-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:1.2rem 2rem}
+.lyrics-ctl{display:flex;align-items:center;gap:.6rem;margin-bottom:1rem}
+.lang-btn{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;padding:.28rem .75rem;border-radius:1px;cursor:pointer;border:1px solid rgba(201,147,42,.22);background:transparent;color:var(--fog);transition:all .2s}
+.lang-btn.on{background:var(--ember);border-color:var(--ember);color:#fff}
+.lyrics-sep{flex:1;height:1px;background:rgba(201,147,42,.1)}
+.lyrics-status{font-size:.55rem;letter-spacing:.15em;color:var(--fog);text-transform:uppercase}
+.lyrics-body{flex:1;overflow-y:auto;padding-right:.4rem;scrollbar-width:thin;scrollbar-color:rgba(201,147,42,.2) transparent}
+.lyrics-body::-webkit-scrollbar{width:3px}
+.lyrics-body::-webkit-scrollbar-thumb{background:rgba(201,147,42,.2);border-radius:2px}
+.lyric-line{display:block;font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:300;line-height:1.85;color:rgba(212,200,190,.45);transition:color .35s,transform .35s,text-shadow .35s;padding:.05rem 0}
+.lyric-line.blank{height:.9rem;display:block}
+.lyric-line.current{color:var(--ember2);transform:translateX(6px);text-shadow:0 0 18px rgba(224,92,26,.35);font-style:italic}
+.lyric-line.past{color:rgba(212,200,190,.22)}
+.lyrics-loading{display:flex;align-items:center;gap:.8rem;padding:1.5rem 0;color:var(--fog);font-size:.72rem}
+.pulse-dots span{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--ember);margin:0 2px;animation:pd .9s ease-in-out infinite}
+.pulse-dots span:nth-child(2){animation-delay:.15s}
+.pulse-dots span:nth-child(3){animation-delay:.3s}
+@keyframes pd{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.tlist-wrap{border-top:1px solid rgba(201,147,42,.08);padding:.8rem 0 .5rem;max-height:220px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(201,147,42,.15) transparent}
+.tlist-wrap::-webkit-scrollbar{width:3px}
+.tlist-item{display:flex;align-items:center;gap:.8rem;padding:.42rem 2rem;cursor:pointer;transition:background .15s;border-left:2px solid transparent}
+.tlist-item:hover{background:rgba(201,147,42,.04)}
+.tlist-item.on{background:rgba(224,92,26,.06);border-left-color:var(--ember)}
+.ti-n{font-size:.6rem;color:var(--fog);width:20px;text-align:right;flex-shrink:0}
+.tlist-item.on .ti-n{color:var(--ember)}
+.ti-title{font-size:.75rem;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(212,200,190,.7)}
+.tlist-item.on .ti-title{color:var(--ash);font-weight:400}
+.ti-bars{display:flex;align-items:flex-end;gap:2px;height:12px;flex-shrink:0;opacity:0;transition:opacity .2s}
+.tlist-item.on .ti-bars{opacity:1}
+.ti-bars span{width:2px;background:var(--ember);border-radius:1px;animation:barwave .7s ease-in-out infinite alternate}
+.ti-bars span:nth-child(1){height:4px}
+.ti-bars span:nth-child(2){height:10px;animation-delay:.12s}
+.ti-bars span:nth-child(3){height:7px;animation-delay:.06s}
+.ti-bars span:nth-child(4){height:12px;animation-delay:.18s}
+@keyframes barwave{from{transform:scaleY(.3)}to{transform:scaleY(1)}}
+
+/* CONTROLS */
+.ctrl-bar{border-top:1px solid rgba(201,147,42,.12);padding:.9rem 2.4rem;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:1rem;background:rgba(10,6,8,.92);backdrop-filter:blur(16px);position:sticky;bottom:0;z-index:50}
+.np-info{display:flex;flex-direction:column;gap:.15rem;overflow:hidden}
+.np-lbl{font-size:.55rem;letter-spacing:.25em;color:var(--ember);text-transform:uppercase}
+.np-title{font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:300;color:var(--ash);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.transport{display:flex;align-items:center;gap:1rem}
+.tbtn{background:none;border:none;color:rgba(212,200,190,.6);cursor:pointer;padding:.45rem;border-radius:50%;transition:all .2s;display:flex}
+.tbtn:hover{color:var(--ash);background:rgba(201,147,42,.08)}
+.tbtn.play-main{width:50px;height:50px;background:linear-gradient(135deg,var(--ember),#b03a0a) !important;color:#fff !important;border-radius:50% !important;box-shadow:0 0 24px rgba(224,92,26,.45),0 4px 16px rgba(0,0,0,.6)}
+.tbtn.play-main:hover{transform:scale(1.07)}
+.prog-area{display:flex;align-items:center;gap:.7rem;justify-content:flex-end}
+.prog-col{display:flex;flex-direction:column;gap:.35rem;min-width:180px}
+.prog-track{height:2.5px;background:rgba(201,147,42,.12);border-radius:2px;cursor:pointer;position:relative}
+.prog-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--ember),var(--ember2));width:0%;transition:width .25s linear;position:relative}
+.prog-fill::after{content:'';position:absolute;right:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--ember2);box-shadow:0 0 8px var(--ember);opacity:0;transition:opacity .2s}
+.prog-track:hover .prog-fill::after{opacity:1}
+.prog-times{display:flex;justify-content:space-between;font-size:.58rem;color:var(--fog);letter-spacing:.05em}
+.vol-btn{background:none;border:none;color:var(--fog);cursor:pointer;padding:.3rem;transition:color .2s}
+.vol-btn:hover{color:var(--gold)}
+
+@media(max-width:860px){
+  .main{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .stage{flex-direction:row;flex-wrap:wrap;padding:1.2rem;min-height:auto;gap:1.4rem;justify-content:center}
+  .art-sleeve{width:150px;height:150px}
+  .vinyl-wrap{width:160px;height:160px}
+  .tonearm-wrap{width:55px;height:100px}
+  .tonearm-arm{height:85px}
+  .vinyl-label-el{width:56px;height:56px}
+  .vl-num{font-size:1rem}
+  .info{border-left:none;border-top:1px solid rgba(201,147,42,.1)}
+  .track-name{font-size:1.4rem}
+  .ctrl-bar{grid-template-columns:1fr auto;gap:.6rem}
+  .prog-area{display:none}
+  .hdr{padding:1rem 1.2rem}
+  .hdr-count{display:none}
+}
+</style>
+</head>
+<body>
+<div id="ambientBg"></div>
+
+<!-- FILE PICKER OVERLAY -->
+<div id="pickerOverlay">
+  <div class="picker-logo">REBORN <em>AI</em> MUSIC</div>
+  <p class="picker-desc">Seleciona os teus ficheiros MP3.<br>São guardados automaticamente — da próxima vez abre direto.</p>
+  <label class="picker-btn">
+    ▶ Escolher MP3
+    <input type="file" accept=".mp3,audio/mpeg" multiple style="display:none" id="fileInput">
+  </label>
+  <div id="savedHint" style="display:none">
+    <span class="picker-saved" onclick="loadSaved()">↺ Usar músicas guardadas anteriormente</span>
+  </div>
+  <p class="picker-hint">No Vercel: carrega automaticamente da pasta public/</p>
+</div>
+
+<!-- LOADING -->
+<div id="loadScreen" style="display:none;position:fixed;inset:0;z-index:1000;background:var(--ink);flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;">
+  <div class="load-logo">REBORN <em>AI</em> MUSIC</div>
+  <div class="load-bar-wrap"><div class="load-bar" id="loadBar"></div></div>
+  <div class="load-txt" id="loadTxt">A carregar…</div>
+</div>
+
+<div class="shell">
+  <header class="hdr">
+    <div class="hdr-logo">REBORN <em>AI</em> MUSIC</div>
+    <div class="hdr-album" id="albumLabel">—</div>
+    <div class="hdr-right">
+      <div class="hdr-count" id="trackCount"></div>
+      <div class="hdr-reload" onclick="resetAndPick()" title="Trocar músicas">⟳ trocar</div>
+    </div>
+  </header>
+  <div class="main">
+    <div class="stage">
+      <div class="stage-glow"></div>
+      <div class="art-sleeve">
+        <div class="art-sleeve-spine"></div>
+        <div class="art-shimmer" id="artShimmer"><div class="art-shimmer-ring"></div><p>A carregar arte…</p></div>
+        <img class="art-img" id="artImg" src="" alt="" crossorigin="anonymous">
+        <div class="art-ai-tag">UNSPLASH</div>
+      </div>
+      <div class="vinyl-wrap">
+        <div class="vinyl-disc" id="vinylDisc">
+          <div class="vinyl-label-el">
+            <span class="vl-brand">REBORN</span>
+            <span class="vl-num" id="vlNum">01</span>
+            <span class="vl-brand">AI</span>
+          </div>
+          <div class="vinyl-spindle"></div>
+        </div>
+        <div class="tonearm-wrap" id="tonearm">
+          <div class="tonearm-pivot"></div>
+          <div class="tonearm-arm"><div class="tonearm-head"></div><div class="tonearm-needle"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="info">
+      <div class="track-hdr">
+        <div class="track-eyebrow" id="eyebrow">Faixa 01</div>
+        <div class="track-name" id="trackName">—</div>
+        <div class="track-sub">Reborn AI Music</div>
+      </div>
+      <div class="lyrics-wrap">
+        <div class="lyrics-ctl">
+          <button class="lang-btn on" id="btnPT" onclick="setLang('pt')">PT</button>
+          <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
+          <div class="lyrics-sep"></div>
+          <div class="lyrics-status" id="lyricsStatus">—</div>
+        </div>
+        <div class="lyrics-body" id="lyricsBody"></div>
+      </div>
+      <div class="tlist-wrap" id="tracklist"></div>
+    </div>
+  </div>
+  <div class="ctrl-bar">
+    <div class="np-info">
+      <div class="np-lbl">A tocar</div>
+      <div class="np-title" id="npTitle">—</div>
+    </div>
+    <div class="transport">
+      <button class="tbtn" onclick="prev()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+      <button class="tbtn play-main" onclick="togglePlay()">
+        <svg id="icPlay" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="icPause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      </button>
+      <button class="tbtn" onclick="next()"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2.5-6 5.5 3.9V8.1L8.5 12zM16 6h2v12h-2z"/></svg></button>
+    </div>
+    <div class="prog-area">
+      <div class="prog-col">
+        <div class="prog-track" id="progTrack" onclick="seekTo(event)"><div class="prog-fill" id="progFill"></div></div>
+        <div class="prog-times"><span id="tCur">0:00</span><span id="tDur">0:00</span></div>
+      </div>
+      <button class="vol-btn" onclick="toggleMute()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" id="volIco"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<audio id="aud" preload="metadata"></audio>
+
+<script>
+// ── STATE ──
+let TRACKS = [], cur = 0, playing = false, lang = 'pt', muted = false;
+const lCache = {}, artCache = {};
+let lyricLines = [];
+const aud = document.getElementById('aud');
+const DB_KEY = 'rebornMusicTracks_v2';
+
+// ── UNSPLASH SOURCE (sem chave, sem CORS) ──
+// Usa source.unsplash.com com query keyword — sem API key necessária
+const ART_KEYWORDS = [
+  'road,journey,light','phoenix,fire,dark','hands,chains,freedom',
+  'mountain,summit,storm','warrior,ruins,sunrise','eye,fire,dramatic',
+  'eagle,sky,clouds','city,night,light','ember,heart,dark',
+  'rocket,stars,space','highway,horizon,speed','ocean,wave,freedom',
+  'candle,dark,cathedral','crowd,concert,light','stadium,sunset,gold',
+  'confetti,victory,gold','sunrise,ocean,warmth','wolf,moon,aurora',
+  'mirror,fire,surreal','seed,concrete,sunlight'
+];
+
+function getArtUrl(idx) {
+  const kw = ART_KEYWORDS[idx % ART_KEYWORDS.length];
+  // source.unsplash.com é público, sem chave, retorna imagem directamente
+  return `https://source.unsplash.com/560x560/?${encodeURIComponent(kw)}&sig=${idx}`;
+}
+
+// ── INIT ──
+async function init() {
+  // 1) Tentar API Vercel
+  try {
+    const res = await fetch('/api/tracks', {signal: AbortSignal.timeout(3000)});
+    if (res.ok) {
+      const data = await res.json();
+      if (data.tracks?.length) {
+        TRACKS = data.tracks;
+        startPlayer();
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // 2) Tentar localStorage (músicas guardadas de sessão anterior)
+  const saved = loadFromStorage();
+  if (saved?.length) {
+    // Mostrar picker com opção de usar guardadas
+    showPicker(true);
+    return;
+  }
+
+  // 3) Mostrar picker limpo
+  showPicker(false);
+}
+
+// ── STORAGE: guardar referências (ObjectURLs não persistem, guardamos nomes) ──
+// Nota: os ficheiros em si não ficam no localStorage (demasiado grandes)
+// Guardamos os nomes para mostrar "músicas anteriores" e pedir ao user que recarregue
+function saveTrackNames(tracks) {
+  try {
+    const names = tracks.map(t => t.originalName || t.title);
+    localStorage.setItem(DB_KEY, JSON.stringify(names));
+  } catch(e) {}
+}
+
+function loadFromStorage() {
+  try {
+    const data = localStorage.getItem(DB_KEY);
+    return data ? JSON.parse(data) : null;
+  } catch(e) { return null; }
+}
+
+function showPicker(hasSaved) {
+  const overlay = document.getElementById('pickerOverlay');
+  overlay.classList.add('show');
+  if (hasSaved) {
+    const saved = loadFromStorage();
+    const hint = document.getElementById('savedHint');
+    hint.style.display = 'block';
+    hint.querySelector('.picker-saved').textContent =
+      `↺ Tenho ${saved.length} músicas guardadas — recarregar`;
+  }
+  document.getElementById('fileInput').onchange = handleFiles;
+}
+
+function loadSaved() {
+  // Não podemos reusar ObjectURLs — o browser não persiste ficheiros
+  // Por isso pedimos ao user que selecione novamente (mas informamos quais eram)
+  // Alternativa: mostrar lista de nomes e pedir que confirme seleção
+  document.getElementById('fileInput').click();
+}
+
+function handleFiles(e) {
+  const files = Array.from(e.target.files)
+    .filter(f => f.name.toLowerCase().endsWith('.mp3'))
+    .sort((a,b) => a.name.localeCompare(b.name));
+
+  if (!files.length) return;
+
+  TRACKS = files.map(f => ({
+    file: URL.createObjectURL(f),
+    title: cleanTitle(f.name),
+    originalName: f.name
+  }));
+
+  saveTrackNames(TRACKS);
+  document.getElementById('pickerOverlay').classList.remove('show');
+  startPlayer();
+}
+
+function cleanTitle(name) {
+  return name
+    .replace(/\.mp3$/i, '')
+    .replace(/[_]+/g, ' ')
+    .replace(/\s*\(\d+\)\s*$/, '')
+    .replace(/\s*__\d+_\s*$/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function resetAndPick() {
+  TRACKS = [];
+  localStorage.removeItem(DB_KEY);
+  showPicker(false);
+}
+
+// ── START PLAYER ──
+function startPlayer() {
+  const ls = document.getElementById('loadScreen');
+  ls.style.display = 'flex';
+  document.getElementById('loadBar').style.width = '60%';
+  document.getElementById('loadTxt').textContent = `${TRACKS.length} faixas prontas…`;
+  document.getElementById('albumLabel').textContent = `${TRACKS.length} faixas`;
+  document.getElementById('trackCount').textContent = TRACKS.length + ' FAIXAS';
+  buildList();
+  document.getElementById('loadBar').style.width = '100%';
+  setTimeout(() => {
+    ls.style.display = 'none';
+    load(0, false);
+  }, 500);
+}
+
+// ── TRACKLIST ──
+function buildList() {
+  document.getElementById('tracklist').innerHTML = TRACKS.map((tr,i) => `
+    <div class="tlist-item" id="ti${i}" onclick="load(${i},true)">
+      <span class="ti-n">${String(i+1).padStart(2,'0')}</span>
+      <span class="ti-title">${tr.title}</span>
+      <div class="ti-bars"><span></span><span></span><span></span><span></span></div>
+    </div>`).join('');
+}
+
+// ── LOAD TRACK ──
+async function load(idx, autoplay=false) {
+  cur = idx;
+  const tr = TRACKS[idx];
+  document.querySelectorAll('.tlist-item').forEach(e=>e.classList.remove('on'));
+  document.getElementById('ti'+idx)?.classList.add('on');
+  document.getElementById('trackName').textContent = tr.title;
+  document.getElementById('npTitle').textContent = tr.title;
+  document.getElementById('eyebrow').textContent = `Faixa ${String(idx+1).padStart(2,'0')} de ${TRACKS.length}`;
+  document.getElementById('vlNum').textContent = String(idx+1).padStart(2,'0');
+  aud.src = tr.file;
+  aud.load();
+  if (autoplay) { try { await aud.play(); setPlaying(true); } catch(e){} }
+  else setPlaying(false);
+  loadArt(idx);
+  loadLyrics(tr.title, idx);
+  updateAmbient(idx);
+  document.getElementById('ti'+idx)?.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+
+// ── AMBIENT ──
+const AMB=['#2a0e18,#0a0618','#0e1a14,#060a18','#1a1008,#180806','#1a0808,#18060a','#1a0a08,#180606','#080a1a,#060618','#0a0a1a,#060818','#1a1208,#180a06','#1a0a06,#180606','#0a1a10,#060a10'];
+function updateAmbient(idx){const[c1,c2]=AMB[idx%AMB.length].split(',');document.getElementById('ambientBg').style.background=`radial-gradient(ellipse 80% 60% at 30% 40%,${c1} 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 75% 70%,${c2} 0%,transparent 60%),var(--ink)`;}
+
+// ── PLAY ──
+function togglePlay(){if(playing){aud.pause();setPlaying(false);}else{aud.play().then(()=>setPlaying(true)).catch(()=>{});}}
+function setPlaying(v){playing=v;document.getElementById('vinylDisc').classList.toggle('playing',v);document.getElementById('tonearm').classList.toggle('playing',v);document.getElementById('icPlay').style.display=v?'none':'block';document.getElementById('icPause').style.display=v?'block':'none';}
+function prev(){load((cur-1+TRACKS.length)%TRACKS.length,playing);}
+function next(){load((cur+1)%TRACKS.length,playing);}
+aud.addEventListener('ended',()=>next());
+aud.addEventListener('timeupdate',()=>{if(!aud.duration)return;const p=aud.currentTime/aud.duration;document.getElementById('progFill').style.width=(p*100)+'%';document.getElementById('tCur').textContent=fmt(aud.currentTime);syncHighlight(p);});
+aud.addEventListener('loadedmetadata',()=>{document.getElementById('tDur').textContent=fmt(aud.duration);});
+function seekTo(e){const r=document.getElementById('progTrack').getBoundingClientRect();aud.currentTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*aud.duration;}
+function fmt(s){if(!s||isNaN(s))return'0:00';return`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;}
+function toggleMute(){muted=!muted;aud.muted=muted;document.getElementById('volIco').style.opacity=muted?.3:1;}
+
+// ── LANG ──
+function setLang(l){lang=l;document.getElementById('btnPT').classList.toggle('on',l==='pt');document.getElementById('btnEN').classList.toggle('on',l==='en');const c=lCache[cur];if(c)renderLyrics(l==='pt'?c.pt:c.en);}
+
+// ── LYRICS via Claude API ──
+async function loadLyrics(title,idx){
+  document.getElementById('lyricsStatus').textContent='A gerar…';
+  document.getElementById('lyricsBody').innerHTML=`<div class="lyrics-loading"><div class="pulse-dots"><span></span><span></span><span></span></div>IA a compor letra…</div>`;
+  lyricLines=[];
+  if(lCache[idx]){renderLyrics(lang==='pt'?lCache[idx].pt:lCache[idx].en);document.getElementById('lyricsStatus').textContent='Pronto';return;}
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:900,messages:[{role:"user",content:`Write powerful anthemic lyrics for a motivational song titled "${title}" by Reborn AI Music. Theme: resilience, rise, transformation, personal power.\n\nRespond ONLY with raw JSON, no markdown:\n{"en":["line","line","","chorus","chorus","","line","line"],"pt":["linha","linha","","refrão","refrão","","linha","linha"]}\n\n14-18 lines total. Empty string = stanza break. Make them beautiful and powerful.`}]})});
+    const d=await res.json();
+    const raw=(d.content?.[0]?.text||'{}').replace(/```json|```/g,'').trim();
+    const p=JSON.parse(raw);
+    lCache[idx]=p;
+    if(idx===cur){renderLyrics(lang==='pt'?p.pt:p.en);document.getElementById('lyricsStatus').textContent='Letra gerada';}
+  }catch(e){if(idx===cur){document.getElementById('lyricsBody').innerHTML=`<span class="lyric-line" style="color:var(--fog);font-style:italic">Letra indisponível.</span>`;document.getElementById('lyricsStatus').textContent='Erro';}}
+}
+function renderLyrics(lines){
+  if(!lines?.length)return;
+  lyricLines=lines;
+  const body=document.getElementById('lyricsBody');
+  body.innerHTML=lines.map((l,i)=>l===''?`<span class="lyric-line blank"></span>`:`<span class="lyric-line" data-i="${i}">${l}</span>`).join('');
+  body.querySelectorAll('.lyric-line:not(.blank)').forEach((el,i)=>{el.style.opacity='0';el.style.transform='translateX(-10px)';el.style.transition=`opacity .5s ${i*.06}s,transform .5s ${i*.06}s,color .35s,text-shadow .35s`;requestAnimationFrame(()=>{el.style.opacity='';el.style.transform='';});});
+}
+function syncHighlight(progress){
+  if(!lyricLines.length)return;
+  const nonBlank=lyricLines.filter(l=>l!=='');
+  if(!nonBlank.length)return;
+  const body=document.getElementById('lyricsBody');
+  const els=body.querySelectorAll('.lyric-line:not(.blank)');
+  const idx=Math.min(Math.floor(progress*nonBlank.length),nonBlank.length-1);
+  els.forEach((el,i)=>{el.classList.toggle('current',i===idx);el.classList.toggle('past',i<idx);});
+  els[idx]?.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+
+// ── ART via source.unsplash.com (sem chave, sem CORS) ──
+function loadArt(idx){
+  const img=document.getElementById('artImg');
+  const shimmer=document.getElementById('artShimmer');
+  img.classList.remove('loaded');
+  shimmer.style.display='flex';
+
+  if(artCache[idx]){
+    img.src=artCache[idx];
+    img.onload=()=>{shimmer.style.display='none';img.classList.add('loaded');};
+    img.onerror=()=>artFallback(shimmer);
+    return;
+  }
+
+  const url = getArtUrl(idx);
+  artCache[idx]=url;
+  img.onload=()=>{
+    if(idx===cur){shimmer.style.display='none';img.classList.add('loaded');}
+  };
+  img.onerror=()=>{
+    // Fallback: gradient artístico CSS
+    artFallback(shimmer);
+  };
+  img.src=url;
+}
+
+function artFallback(shimmer){
+  shimmer.style.display='none';
+  const gradients=[
+    'linear-gradient(135deg,#2a0a14,#0a0618,#1a0a20)',
+    'linear-gradient(135deg,#1a0808,#0a1418,#180610)',
+    'linear-gradient(135deg,#0a1820,#180a08,#0a0a18)',
+  ];
+  const sleeve=document.querySelector('.art-sleeve');
+  sleeve.style.background=gradients[cur%gradients.length];
+}
+
+// ── START ──
+init();
+</script>
+</body>
+</html>
